@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>영화 - CGV</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="header-inner">
+            <a href="/" class="logo"><img src="https://cdn.cgv.co.kr/cgvpomscontent/ips/unitCnts/2025/1114/4c8da3708290405bb6400a6a553cade2.svg" alt="CGV" height="28"></a>
+            <nav class="nav">
+                <a href="/pages/movies.html">영화</a>
+                <a href="/pages/schedule.html">상영시간표</a>
+                <a href="/pages/bookings.html">예매내역</a>
+            </nav>
+            <div class="auth-buttons" id="auth-buttons">
+                <a href="/pages/login.html" class="btn btn-outline">로그인</a>
+                <a href="/pages/register.html" class="btn btn-primary">회원가입</a>
+            </div>
+            <div class="user-menu" id="user-menu" style="display:none;">
+                <span id="user-name" style="color:#ccc;font-size:14px;"></span>
+                <button class="btn btn-outline" onclick="logout()">로그아웃</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="section">
+        <div class="section-header">
+            <h1 class="section-title">무비차트</h1>
+        </div>
+        <div class="filter-bar">
+            <button class="filter-btn active" onclick="loadMovies('')">전체</button>
+            <button class="filter-btn" onclick="loadMovies('showing')">현재상영작</button>
+            <button class="filter-btn" onclick="loadMovies('upcoming')">상영예정작</button>
+        </div>
+        <div class="movie-grid" id="movie-grid">
+            <!-- 영화 카드 동적 생성 -->
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>CJ CGV(주) | CJ AI 클라우드 엔지니어 부트캠프 실습 프로젝트</p>
+    </footer>
+
+    <script src="/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            loadMovies('');
+        });
+
+        async function loadMovies(status) {
+            // 필터 버튼 활성화 처리
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent.includes(status === 'showing' ? '현재' : status === 'upcoming' ? '상영예정' : '전체')) {
+                    btn.classList.add('active');
+                }
+            });
+            if (!status) document.querySelector('.filter-btn').classList.add('active');
+
+            try {
+                const url = status 
+                    ? `/api/movies?status=${status}` 
+                    : `/api/movies`;
+                const data = await api.get(url);
+                const movies = data.movies || data;
+                renderMovies(movies);
+            } catch (err) {
+                console.error('영화 목록 로드 실패:', err);
+            }
+        }
+
+        function renderMovies(movies) {
+            const grid = document.getElementById('movie-grid');
+            if (!movies || movies.length === 0) {
+                grid.innerHTML = '<p style="color:#888; grid-column: 1/-1; text-align:center; padding:40px 0;">등록된 영화가 없습니다.</p>';
+                return;
+            }
+            grid.innerHTML = movies.map((movie, index) => `
+                <div class="movie-card" onclick="location.href='/pages/movie-detail.html?id=${movie.id}'">
+                    <div class="movie-poster">
+                        <img src="${movie.poster_url || 'https://via.placeholder.com/300x450?text=No+Image'}" alt="${movie.title}">
+                        <span class="movie-rank">${index + 1}</span>
+                    </div>
+                    <div class="movie-info">
+                        <div class="movie-title">${movie.title}</div>
+                        <div class="movie-meta">${movie.release_date || ''} ${movie.genre ? '· ' + movie.genre : ''}</div>
+                        <div class="movie-egg">🥚 예매율 ${movie.booking_rate || '-'}%</div>
+                        <div class="movie-buttons">
+                            <button class="btn-book" onclick="event.stopPropagation(); location.href='/pages/schedule.html?movie_id=${movie.id}'">예매</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>

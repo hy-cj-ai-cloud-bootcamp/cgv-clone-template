@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>영화 상세 - CGV</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="header-inner">
+            <a href="/" class="logo"><img src="https://cdn.cgv.co.kr/cgvpomscontent/ips/unitCnts/2025/1114/4c8da3708290405bb6400a6a553cade2.svg" alt="CGV" height="28"></a>
+            <nav class="nav">
+                <a href="/pages/movies.html">영화</a>
+                <a href="/pages/schedule.html">상영시간표</a>
+                <a href="/pages/bookings.html">예매내역</a>
+            </nav>
+            <div class="auth-buttons" id="auth-buttons">
+                <a href="/pages/login.html" class="btn btn-outline">로그인</a>
+                <a href="/pages/register.html" class="btn btn-primary">회원가입</a>
+            </div>
+            <div class="user-menu" id="user-menu" style="display:none;">
+                <span id="user-name" style="color:#ccc;font-size:14px;"></span>
+                <button class="btn btn-outline" onclick="logout()">로그아웃</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="movie-detail" id="movie-detail">
+        <!-- 동적 생성 -->
+    </div>
+
+    <footer class="footer">
+        <p>CJ CGV(주) | CJ AI 클라우드 엔지니어 부트캠프 실습 프로젝트</p>
+    </footer>
+
+    <script src="/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            loadMovieDetail();
+        });
+
+        async function loadMovieDetail() {
+            const movieId = getQueryParam('id');
+            if (!movieId) {
+                alert('영화 정보를 찾을 수 없습니다.');
+                location.href = '/pages/movies.html';
+                return;
+            }
+
+            try {
+                const movie = await api.get(`${API_BASE}/movies/${movieId}`);
+                renderDetail(movie);
+            } catch (err) {
+                console.error('영화 상세 로드 실패:', err);
+                document.getElementById('movie-detail').innerHTML = '<p style="text-align:center;color:#888;padding:60px 0;">영화 정보를 불러올 수 없습니다.</p>';
+            }
+        }
+
+        function renderDetail(movie) {
+            const container = document.getElementById('movie-detail');
+            container.innerHTML = `
+                <div class="movie-detail-header">
+                    <div class="movie-detail-poster">
+                        <img src="${movie.poster_url || 'https://via.placeholder.com/300x450?text=No+Image'}" alt="${movie.title}">
+                    </div>
+                    <div class="movie-detail-info">
+                        <h1>${movie.title}</h1>
+                        <div class="detail-meta">
+                            ${movie.genre ? `<span>🎬 ${movie.genre}</span>` : ''}
+                            ${movie.duration ? `<span>⏱ ${movie.duration}분</span>` : ''}
+                            ${movie.release_date ? `<span>📅 ${movie.release_date}</span>` : ''}
+                            ${movie.director ? `<span>🎥 ${movie.director}</span>` : ''}
+                            ${movie.rating ? `<span>📋 ${movie.rating}</span>` : ''}
+                        </div>
+                        <div class="synopsis">
+                            <p>${movie.description || movie.synopsis || '줄거리 정보가 없습니다.'}</p>
+                        </div>
+                        ${movie.cast ? `
+                        <div style="margin-bottom:24px;">
+                            <h3 style="font-size:15px;margin-bottom:8px;color:#ccc;">출연진</h3>
+                            <p style="font-size:14px;color:#999;">${movie.cast}</p>
+                        </div>` : ''}
+                        <a href="/pages/schedule.html?movie_id=${movie.id}" class="btn btn-primary btn-lg">예매하기</a>
+                    </div>
+                </div>
+            `;
+            document.title = `${movie.title} - CGV`;
+        }
+    </script>
+</body>
+</html>

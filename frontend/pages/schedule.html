@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>상영시간표 - CGV</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="header-inner">
+            <a href="/" class="logo"><img src="https://cdn.cgv.co.kr/cgvpomscontent/ips/unitCnts/2025/1114/4c8da3708290405bb6400a6a553cade2.svg" alt="CGV" height="28"></a>
+            <nav class="nav">
+                <a href="/pages/movies.html">영화</a>
+                <a href="/pages/schedule.html">상영시간표</a>
+                <a href="/pages/bookings.html">예매내역</a>
+            </nav>
+            <div class="auth-buttons" id="auth-buttons">
+                <a href="/pages/login.html" class="btn btn-outline">로그인</a>
+                <a href="/pages/register.html" class="btn btn-primary">회원가입</a>
+            </div>
+            <div class="user-menu" id="user-menu" style="display:none;">
+                <span id="user-name" style="color:#ccc;font-size:14px;"></span>
+                <button class="btn btn-outline" onclick="logout()">로그아웃</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="schedule-section">
+        <h2>상영시간표</h2>
+        <div class="date-selector" id="date-selector">
+            <!-- 날짜 버튼 동적 생성 -->
+        </div>
+        <div id="schedule-list">
+            <!-- 스케줄 목록 동적 생성 -->
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>CJ CGV(주) | CJ AI 클라우드 엔지니어 부트캠프 실습 프로젝트</p>
+    </footer>
+
+    <script src="/js/app.js"></script>
+    <script>
+        let selectedDate = '';
+        const movieId = getQueryParam('movie_id');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            renderDateSelector();
+        });
+
+        function renderDateSelector() {
+            const container = document.getElementById('date-selector');
+            const today = new Date();
+            const days = ['일', '월', '화', '수', '목', '금', '토'];
+            let html = '';
+
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() + i);
+                const dateStr = date.toISOString().split('T')[0];
+                const dayName = days[date.getDay()];
+                const month = date.getMonth() + 1;
+                const day = date.getDate();
+                const isActive = i === 0 ? 'active' : '';
+                html += `<button class="date-btn ${isActive}" onclick="selectDate('${dateStr}', this)">${month}/${day}(${dayName})</button>`;
+            }
+            container.innerHTML = html;
+            
+            // 오늘 날짜로 초기 로드
+            selectedDate = today.toISOString().split('T')[0];
+            loadSchedules();
+        }
+
+        function selectDate(date, btn) {
+            selectedDate = date;
+            document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            loadSchedules();
+        }
+
+        async function loadSchedules() {
+            try {
+                let url = `${API_BASE}/schedules?date=${selectedDate}`;
+                if (movieId) url += `&movie_id=${movieId}`;
+                const schedules = await api.get(url);
+                renderSchedules(schedules);
+            } catch (err) {
+                console.error('상영시간표 로드 실패:', err);
+                document.getElementById('schedule-list').innerHTML = '<p style="color:#888;text-align:center;padding:40px 0;">상영시간표를 불러올 수 없습니다.</p>';
+            }
+        }
+
+        function renderSchedules(schedules) {
+            const container = document.getElementById('schedule-list');
+            if (!schedules || schedules.length === 0) {
+                container.innerHTML = '<p style="color:#888;text-align:center;padding:40px 0;">해당 날짜에 상영 일정이 없습니다.</p>';
+                return;
+            }
+            container.innerHTML = schedules.map(s => `
+                <div class="schedule-card">
+                    <div class="schedule-movie">
+                        <h3>${s.movie_title || s.title || '영화'}</h3>
+                        <span class="schedule-theater">${s.theater || s.hall || ''} ${s.start_time ? '· ' + s.start_time : ''}</span>
+                    </div>
+                    <button class="time-btn" onclick="goSeatSelect(${s.id})">
+                        ${s.start_time || '시간 미정'}<br>
+                        <small style="color:#999;">${s.available_seats != null ? s.available_seats + '석' : ''}</small>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function goSeatSelect(scheduleId) {
+            if (!requireAuth()) return;
+            location.href = `/pages/seat-select.html?schedule_id=${scheduleId}`;
+        }
+    </script>
+</body>
+</html>

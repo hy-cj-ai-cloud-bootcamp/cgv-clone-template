@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CGV</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <!-- 헤더 -->
+    <header class="header">
+        <div class="header-inner">
+            <a href="/" class="logo"><img src="https://cdn.cgv.co.kr/cgvpomscontent/ips/unitCnts/2025/1114/4c8da3708290405bb6400a6a553cade2.svg" alt="CGV" height="28"></a>
+            <nav class="nav">
+                <a href="/pages/movies.html">영화</a>
+                <a href="/pages/schedule.html">상영시간표</a>
+                <a href="/pages/bookings.html">예매내역</a>
+            </nav>
+            <div class="auth-buttons" id="auth-buttons">
+                <a href="/pages/login.html" class="btn btn-outline">로그인</a>
+                <a href="/pages/register.html" class="btn btn-primary">회원가입</a>
+            </div>
+            <div class="user-menu" id="user-menu" style="display:none;">
+                <span id="user-name" style="color:#ccc;font-size:14px;"></span>
+                <button class="btn btn-outline" onclick="logout()">로그아웃</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 퀵메뉴 -->
+    <div class="quick-menu">
+        <div class="quick-menu-inner">
+            <a href="/pages/schedule.html">빠른예매</a>
+            <a href="/pages/movies.html">무비차트</a>
+            <a href="#">극장</a>
+            <a href="#">이벤트</a>
+            <a href="http://localhost:8501" target="_blank">AI 추천</a>
+        </div>
+    </div>
+
+    <!-- 무비차트 -->
+    <section class="section">
+        <div class="section-header">
+            <h2 class="section-title">무비차트</h2>
+            <div class="section-tabs">
+                <button class="section-tab active" onclick="filterMovies('all', this)">전체</button>
+                <button class="section-tab" onclick="filterMovies('showing', this)">현재상영작</button>
+                <button class="section-tab" onclick="filterMovies('upcoming', this)">상영예정</button>
+            </div>
+        </div>
+        <div class="movie-grid" id="movie-grid"></div>
+    </section>
+
+    <!-- 푸터 -->
+    <footer class="footer">
+        <p>CJ CGV(주) | CJ AI 클라우드 엔지니어 부트캠프 실습 프로젝트</p>
+        <p style="margin-top:8px;">본 사이트는 교육 목적으로 제작된 클론 프로젝트입니다.</p>
+    </footer>
+
+    <script src="/js/app.js"></script>
+    <script>
+        let currentFilter = 'all';
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            checkAuth();
+            await loadMovies();
+        });
+
+        function filterMovies(status, btn) {
+            currentFilter = status;
+            document.querySelectorAll('.section-tab').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            loadMovies();
+        }
+
+        async function loadMovies() {
+            try {
+                let url = '/api/movies';
+                if (currentFilter !== 'all') url += `?status=${currentFilter}`;
+                const data = await api.get(url);
+                const movies = data.movies || data;
+                const grid = document.getElementById('movie-grid');
+
+                const ratingClass = (r) => {
+                    if (r === '전체') return 'rating-all';
+                    if (r === '12세') return 'rating-12';
+                    if (r === '15세') return 'rating-15';
+                    return 'rating-18';
+                };
+
+                grid.innerHTML = movies.map((m, i) => `
+                    <div class="movie-card" onclick="location.href='/pages/movie-detail.html?id=${m.id}'">
+                        <div class="movie-poster">
+                            <img src="${m.poster_url || ''}" alt="${m.title}" onerror="this.style.display='none'">
+                            <span class="movie-rank">${i + 1}</span>
+                            <span class="movie-rating-badge ${ratingClass(m.rating)}">${m.rating === '전체' ? 'All' : m.rating?.replace('세','')}</span>
+                        </div>
+                        <div class="movie-info">
+                            <p class="movie-title">${m.title}</p>
+                            <p class="movie-meta">${m.release_date || ''} 개봉</p>
+                            <div class="movie-buttons">
+                                <button class="btn-book" onclick="event.stopPropagation(); location.href='/pages/schedule.html?movie_id=${m.id}'">예매하기</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error('영화 로드 실패:', e);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회원가입 - CGV</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="header-inner">
+            <a href="/" class="logo"><img src="https://cdn.cgv.co.kr/cgvpomscontent/ips/unitCnts/2025/1114/4c8da3708290405bb6400a6a553cade2.svg" alt="CGV" height="28"></a>
+            <nav class="nav">
+                <a href="/pages/movies.html">영화</a>
+                <a href="/pages/schedule.html">상영시간표</a>
+                <a href="/pages/bookings.html">예매내역</a>
+            </nav>
+            <div class="auth-buttons" id="auth-buttons">
+                <a href="/pages/login.html" class="btn btn-outline">로그인</a>
+                <a href="/pages/register.html" class="btn btn-primary">회원가입</a>
+            </div>
+            <div class="user-menu" id="user-menu" style="display:none;">
+                <span id="user-name" style="color:#ccc;font-size:14px;"></span>
+                <button class="btn btn-outline" onclick="logout()">로그아웃</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="form-container">
+        <h2>회원가입</h2>
+        <form id="register-form" onsubmit="handleRegister(event)">
+            <div class="form-group">
+                <label for="username">이름</label>
+                <input type="text" id="username" placeholder="이름을 입력하세요" required>
+            </div>
+            <div class="form-group">
+                <label for="email">이메일</label>
+                <input type="email" id="email" placeholder="이메일을 입력하세요" required>
+            </div>
+            <div class="form-group">
+                <label for="password">비밀번호</label>
+                <input type="password" id="password" placeholder="비밀번호를 입력하세요 (6자 이상)" minlength="6" required>
+            </div>
+            <div class="form-group">
+                <label for="password-confirm">비밀번호 확인</label>
+                <input type="password" id="password-confirm" placeholder="비밀번호를 다시 입력하세요" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg btn-block" style="margin-top:24px;">가입하기</button>
+        </form>
+        <p style="text-align:center;margin-top:20px;font-size:13px;color:#888;">
+            이미 계정이 있으신가요? <a href="/pages/login.html" style="color:#fb4357;">로그인</a>
+        </p>
+    </div>
+
+    <footer class="footer">
+        <p>CJ CGV(주) | CJ AI 클라우드 엔지니어 부트캠프 실습 프로젝트</p>
+    </footer>
+
+    <script src="/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+        });
+
+        async function handleRegister(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const passwordConfirm = document.getElementById('password-confirm').value;
+
+            if (password !== passwordConfirm) {
+                alert('비밀번호가 일치하지 않습니다.');
+                return;
+            }
+
+            try {
+                await api.post(`${API_BASE}/auth/register`, { username, email, password });
+                alert('회원가입이 완료되었습니다! 로그인 해주세요.');
+                window.location.href = '/pages/login.html';
+            } catch (err) {
+                alert(err.detail || '회원가입에 실패했습니다. 다시 시도해주세요.');
+            }
+        }
+    </script>
+</body>
+</html>

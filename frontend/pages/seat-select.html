@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>좌석 선택 - CGV</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="header-inner">
+            <a href="/" class="logo"><img src="https://cdn.cgv.co.kr/cgvpomscontent/ips/unitCnts/2025/1114/4c8da3708290405bb6400a6a553cade2.svg" alt="CGV" height="28"></a>
+            <nav class="nav">
+                <a href="/pages/movies.html">영화</a>
+                <a href="/pages/schedule.html">상영시간표</a>
+                <a href="/pages/bookings.html">예매내역</a>
+            </nav>
+            <div class="auth-buttons" id="auth-buttons">
+                <a href="/pages/login.html" class="btn btn-outline">로그인</a>
+                <a href="/pages/register.html" class="btn btn-primary">회원가입</a>
+            </div>
+            <div class="user-menu" id="user-menu" style="display:none;">
+                <span id="user-name" style="color:#ccc;font-size:14px;"></span>
+                <button class="btn btn-outline" onclick="logout()">로그아웃</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="seat-section">
+        <h2>좌석 선택</h2>
+        <div id="schedule-info" style="margin-bottom:24px;font-size:14px;color:#aaa;text-align:center;"></div>
+        <div class="screen-label">SCREEN</div>
+        <div class="screen"></div>
+        <div class="seat-grid" id="seat-grid">
+            <!-- 좌석 동적 생성 -->
+        </div>
+        <div class="seat-legend">
+            <span><span class="legend-box" style="background:#2a2a2a;border:1px solid #555;"></span> 선택가능</span>
+            <span><span class="legend-box" style="background:#fb4357;"></span> 선택됨</span>
+            <span><span class="legend-box" style="background:#444;"></span> 예매완료</span>
+        </div>
+        <div class="booking-summary">
+            <p style="color:#aaa;font-size:14px;">선택 좌석: <span id="selected-seats-text">-</span></p>
+            <div class="booking-total" id="total-price">0원</div>
+            <button class="btn btn-primary btn-lg btn-block" onclick="submitBooking()">예매하기</button>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>CJ CGV(주) | CJ AI 클라우드 엔지니어 부트캠프 실습 프로젝트</p>
+    </footer>
+
+    <script src="/js/app.js"></script>
+    <script>
+        const PRICE_PER_SEAT = 15000;
+        let selectedSeats = [];
+        let takenSeats = [];
+        const scheduleId = getQueryParam('schedule_id');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            if (!requireAuth()) return;
+            loadScheduleInfo();
+        });
+
+        async function loadScheduleInfo() {
+            if (!scheduleId) {
+                alert('상영 정보가 없습니다.');
+                location.href = '/pages/schedule.html';
+                return;
+            }
+            try {
+                const schedule = await api.get(`${API_BASE}/schedules/${scheduleId}`);
+                takenSeats = schedule.taken_seats || [];
+                document.getElementById('schedule-info').innerHTML = `
+                    <strong>${schedule.movie_title || ''}</strong> · ${schedule.date || ''} ${schedule.start_time || ''} · ${schedule.theater || schedule.hall || ''}
+                `;
+                renderSeats();
+            } catch (err) {
+                console.error('스케줄 로드 실패:', err);
+                document.getElementById('seat-grid').innerHTML = '<p style="color:#888;text-align:center;grid-column:1/-1;">좌석 정보를 불러올 수 없습니다.</p>';
+            }
+        }
+
+        function renderSeats() {
+            const grid = document.getElementById('seat-grid');
+            const rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+            const cols = 10;
+            let html = '';
+
+            for (const row of rows) {
+                for (let col = 1; col <= cols; col++) {
+                    const seatId = `${row}${col}`;
+                    const isTaken = takenSeats.includes(seatId);
+                    const cls = isTaken ? 'seat taken' : 'seat';
+                    html += `<div class="${cls}" data-seat="${seatId}" onclick="${isTaken ? '' : `toggleSeat('${seatId}', this)`}">${seatId}</div>`;
+                }
+            }
+            grid.innerHTML = html;
+        }
+
+        function toggleSeat(seatId, el) {
+            if (el.classList.contains('taken')) return;
+
+            if (el.classList.contains('selected')) {
+                el.classList.remove('selected');
+                selectedSeats = selectedSeats.filter(s => s !== seatId);
+            } else {
+                if (selectedSeats.length >= 8) {
+                    alert('최대 8좌석까지 선택 가능합니다.');
+                    return;
+                }
+                el.classList.add('selected');
+                selectedSeats.push(seatId);
+            }
+            updateSummary();
+        }
+
+        function updateSummary() {
+            document.getElementById('selected-seats-text').textContent = selectedSeats.length > 0 ? selectedSeats.join(', ') : '-';
+            document.getElementById('total-price').textContent = formatPrice(selectedSeats.length * PRICE_PER_SEAT);
+        }
+
+        async function submitBooking() {
+            if (selectedSeats.length === 0) {
+                alert('좌석을 선택해주세요.');
+                return;
+            }
+            if (!confirm(`${selectedSeats.join(', ')} 좌석을 예매하시겠습니까?\n금액: ${formatPrice(selectedSeats.length * PRICE_PER_SEAT)}`)) return;
+
+            try {
+                await api.post(`${API_BASE}/bookings`, {
+                    schedule_id: parseInt(scheduleId),
+                    seats: selectedSeats
+                });
+                alert('예매가 완료되었습니다!');
+                location.href = '/pages/bookings.html';
+            } catch (err) {
+                alert(err.detail || '예매에 실패했습니다. 다시 시도해주세요.');
+            }
+        }
+    </script>
+</body>
+</html>
